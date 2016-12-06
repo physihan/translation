@@ -129,10 +129,68 @@ class Person {
 }
 ```
 拼写错误并不会抛出
+
 ```javascript
 var person = new Person('Maks', 'Nemisj');
 console.log(person.fulName);
 ```
+同样非严格，非冗长，不可追溯的行为导致可能的错误。  
+在我发现这个，我的问题是：有什么要做，以使类使用
+getter和setter时更严格吗？我发现：肯定有，但这是
+值得吗？为代码添加额外的复杂性层，以减少大括号？也
+可以不使用getter和setter来定义API，并且可以解决问
+题。除非你是一个核心开发者，并愿意继续，还有另一个解
+决方案，如下所述。
+## 使用代理来解决
+除了getter和setter方法，2015年的ECMAScript（ES6）
+还带有代理对象。代理帮助您定义委托方法，可以用
+于在实际访问密钥之前执行各种操作。实际上，它看
+起来就像动态getter / setters。
 
+代理对象可用于捕获对类的实例的任何访问，并在该类中未找到
+预定义的getter或setter时抛出错误。
 
+为此，必须执行两个操作：
+- 创建基于getter和setter的名单Person雏形。
+- 创建Proxy对象，这将考验对这些列表。
 
+让我们实现它。
+
+首先，要找出什么样的getter和setter方法是可用的类  Person，它
+可以使用  getOwnPropertyNames 和  getOwnPropertyDescriptor：
+
+```javascript
+var names = Object.getOwnPropertyNames(Person.prototype);
+var getters = names.filter((name) => {
+  var result =  Object.getOwnPropertyDescriptor(Person.prototype, name);
+  return !!result.get;
+});
+var setters = names.filter((name) => {
+  var result =  Object.getOwnPropertyDescriptor(Person.prototype, name);
+  return !!result.set;
+});
+```
+在此之后，创建一个  Proxy 对象，将针对这些名单进行测试：
+
+```javascript
+var handler = {
+  get(target, name) {
+    if (getters.indexOf(name) != -1) {
+      return target[name];
+    }
+    throw new Error('Getter "' + name + '" not found in "Person"');
+  },
+  set(target, name) {
+    if (setters.indexOf(name) != -1) {
+      return target[name];
+    }
+    throw new Error('Setter "' + name + '" not found in "Person"');
+  }
+};
+person = new Proxy(person, handler);
+```
+现在，只要你会尝试访问  person.fulName，信息
+Error: Getter "fulName" not found in "Person" 将被显示。
+
+我希望这篇文章帮助你了解有关getters和setter的整个图片，以及他们可
+以带入代码的危险。
