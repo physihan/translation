@@ -86,7 +86,53 @@ person.fulName = 'Boris Gorbachev';
 我知道现在class在javascript社区并不是很受欢迎。人们在辩论在一个以函数/原型继承
 为核心的javascript语言中类是否真的有必要，然而事实上,class已经出现在了es6
 的规范中了。  
-对我来说，类是指定在类的外部以及应用内部之间定义好的api接口的一种方式
+对我来说，类是指定在类的外部以及应用内部之间定义好的api接口的一种方式。
+它 是一个将规则放进黑白片的抽象,假定这些规则在一段时间内不会改变。  
+是时候将person对象写成类的形式了，Person类定义了获取和设置fullname的接口
+
+```javascript
+class Person {
+  constructor(firstName, lastName) {
+    this.firstName = firstName;
+    this.lastName = lastName;
+  }
+  getFullName() {
+    return this.firstName + ' ' + this.lastName;
+  }
+  setFullName(value) {
+    var names = value.split(' ');
+    this.firstName = names[0];
+    this.lastName = names[1];
+  }
+}
+```
+类定义了严格的接口描述,但是getters和setters让它变得不是那么严格，
+我们已经习惯了在使用对象字面量和JSON时发生的拼写错误。
+至少我希望类会更严格，并为开发者更好的提供反馈意见。  
+虽然在类上定义getter和setter时这种情况没有什
+么不同。它不会阻止其他人犯打字错误，没有任何反馈。
+
+```javascript
+class Person {
+  constructor(firstName, lastName) {
+    this.firstName = firstName;
+    this.lastName = lastName;
+  }
+  get fullName() {
+    return this.firstName + ' ' + this.lastName;
+  }
+  set fullName(value) {
+    var names = value.split(' ');
+    this.firstName = names[0];
+    this.lastName = names[1];
+  }
+}
+```
+拼写错误并不会抛出
+```javascript
+var person = new Person('Maks', 'Nemisj');
+console.log(person.fulName);
+```
 
 
 
