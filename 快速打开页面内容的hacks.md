@@ -96,4 +96,65 @@ iframe.src = '';
 使用`fetch()`会非常高效的stream数据，然而Safari并不支持，可以使用XHR来代替。  
 我做了一个小测试可以和GitHub所采用的方式做[比较]()，下面是基于3g的测试结果
 
-![tupian](http://ofsskz9rj.bkt.clouddn.com/translationQQ%E6%88%AA%E5%9B%BE20161208132200.png)
+![tupian](./asset/img/20161208.png)  
+将内容通过数据流的方式加载进来要比xhr+innerHTML要快1.5s左右，所有内容加载完要提前0.5s，stream意味着浏览器
+发现他们会比较早，所以可以一边下载一边渲染。  
+GitHub能够实现是因为服务器处理html，但是如果你使用一个框架，用自己的方式来表达DOM，这就行不通了，
+对于这种情况，下面这种方法是一个折中的做法：
+## 换行符JSON
+很多网站使用json的格式传递动态的更新项。不幸的是JSON并不是一个streaming-friendly（流友好）的格式。
+虽然有JSON的[streaming JSON parsers](https://github.com/creationix/jsonparse)（JSON格式转streaming格式的工具），
+但是这个并不好用。  
+所以不采用传递成片的JSON：
+
+```javascript
+{
+  "Comments": [
+    {"author": "Alex", "body": "…"},
+    {"author": "Jake", "body": "…"}
+  ]
+}
+```
+而是传递JSON对象在新的一行里：
+
+```javascript
+{"author": "Alex", "body": "…"}
+{"author": "Jake", "body": "…"}
+```
+这就是“newline-delimited JSON”（换行符JSON），[这是它的定义描述](http://specs.okfnlabs.org/ndjson/)。
+写一个这样的解析器要容易得多，在2017年我们将可以写出下面这种流的变换以及组合：（这里感觉可以用JSON.stringify()）
+
+```javascript
+const response = await fetch('comments.ndjson');
+const comments = response.body
+  // From bytes to text:
+  .pipeThrough(new TextDecoder())
+  // Buffer until newlines:
+  .pipeThrough(splitStream('\n'))
+  // Parse chunks as JSON:
+  .pipeThrough(parseJSON());
+
+for await (const comment of comments) {
+  // Process each comment and add it to the page:
+  // (via whatever template or VDOM you're using)
+  addCommentToPage(comment);
+}
+```
+这里`splitStream`和`parseJSON`是可复用的stream的变换，与此同时，为了让大多数浏览器兼容
+我们可以从XHR上开始。  
+再一次的，我给出了一个[小测试用例来比较](https://jakearchibald.github.io/streaming-html/)下
+面是基于3g的测试结果：
+
+![tupian](./asset/img/20161208143048.png)   
+和传统的JSON相比，ND-JSON将内容呈现在屏幕上要比传统的快1.5s，尽管它并没有iframe这种方式快，它
+需要等待JSON完整的加载完才能去创建元素，你会遇到lack-of-streaming（缺少流）的问题如果JSON对象非常大。
+
+## 不要太早使用单页应用
+正如我上面所说的，GitHub写了很代码来解决这个性能问题。在客户端上重新实现链接是很困难的，而且如果这个页面内
+要替换的东西比较大的话就不值得这么做了。  
+如果我们比较一下[一个简单的浏览器导航](https://jakearchibald.github.io/streaming-html/)
+
+![tupian](./asset/img/20161208144555.png) 
+。。。打开一个简单的不使用js通过服务器渲染的页面和上面的差不多一样快，除了评论列表，测试页面非常简单，
+如果您在页面之间重复了大量复杂的内容，您的结果可能会有所不同（基本上，我的意思是可怕的广告脚本），多测试！
+你可能写了很多代码然而只是提升了一点点性能，或者性能更差。
