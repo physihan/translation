@@ -85,4 +85,15 @@ iframe.onload = () => {
 iframe.src = '';
 ```
 尽管`<p>Hello!</p>`写在了`iframe`里边，但它出现在父文档里面！这是
-因为[html parser](https://html.spec.whatwg.org/multipage/syntax.html#parsing)
+因为[html parser](https://html.spec.whatwg.org/multipage/syntax.html#parsing)中保留了一
+个打开的元素的堆栈 （[stack of open elements](https://html.spec.whatwg.org/multipage/syntax.html#stack-of-open-elements)
+记录html元素的匹配，`<xx>`和`</xx>`，这就是一对打开和关闭的元素）新创建的元素会插入到堆栈中（目测是栈顶，后进后出）
+我们怎么操作`<streaming-element>`并不影响，它就是有效的。  
+同样的，这个方法处理html比`innerHTML`更加贴近标准的页面加载解析器。
+显然，scripts会父文档的上下文中下载和执行，然而在火狐中根本不执行，原因是[script不应该被执行](https://html.spec.whatwg.org/multipage/syntax.html#scripts-that-modify-the-page-as-it-is-being-parsed)
+但是在Edge, Safari和 Chrome 中都适用。  
+现在我们只需从服务器stream数据，然后在数据到来时使用`iframe.contentDocument.write()`写入数据。
+使用`fetch()`会非常高效的stream数据，然而Safari并不支持，可以使用XHR来代替。  
+我做了一个小测试可以和GitHub所采用的方式做[比较]()，下面是基于3g的测试结果
+
+![tupian](http://ofsskz9rj.bkt.clouddn.com/translationQQ%E6%88%AA%E5%9B%BE20161208132200.png)
