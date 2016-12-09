@@ -5,7 +5,7 @@
 
 background-image: url("https://i.ytimg.com/vi_webp/4zG0AZRZD6Q/sddefault.webp");
 这里我点击了一个链接，然后在一个新页面把这个链接粘贴进去，虽然这个页面是后打开的，但新页面渲染的更快。
-## showthem what you got
+## show them what you got
 <figure class="full-figure connection-diagram blueprint animate-diagram" style="background-color: #0065a4">
 <svg viewBox="0 0 1920 1000">
   <g fill="#fff">
